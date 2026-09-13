@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseRepository, inspectSource } from "../src/lib/scanner";
+import { parseRepository, inspectSource, sinkFindings } from "../src/lib/scanner";
 describe("repository input validation", () => {
   it("accepts repository slugs and canonical URLs", () => {
     expect(parseRepository("anshace/loupe")).toEqual({
@@ -85,5 +85,71 @@ describe("static source analysis", () => {
       severity: "medium",
       source: "static",
     });
+  });
+});
+
+describe("repository input normalization (back-end hardening)", () => {
+  it("strips .git before a pull-request path", () => {
+    expect(parseRepository("https://github.com/anshace/loupe.git/pull/7")).toEqual(
+      { repository: "anshace/loupe", pullNumber: 7 },
+    );
+  });
+  it("tolerates a trailing slash after the pull number", () => {
+    expect(parseRepository("https://github.com/anshace/loupe/pull/7/")).toEqual(
+      { repository: "anshace/loupe", pullNumber: 7 },
+    );
+  });
+  it("keeps rejecting path traversal inside the repo segment", () => {
+    expect(() => parseRepository("a/../b")).toThrow();
+  });
+});
+
+describe("engine sink rule pack (deterministic, per-language)", () => {
+  it("flags Python deserialization sinks at high severity", () => {
+    const findings = sinkFindings([
+      {
+        path: "jobs/loader.py",
+        lines: [
+          { number: 3, text: "data = pickle.loads(blob)" },
+          { number: 4, text: "cfg = yaml.load(blob)" },
+        ],
+      },
+    ]);
+    expect(findings.map((f) => f.severity)).toEqual(["high", "high"]);
+    expect(findings[0].file).toBe("jobs/loader.py");
+    expect(findings[0].line).toBe(3);
+    expect(findings[0].title).toContain("pickle");
+  });
+
+  it("flags sinks the hand-written rules miss (new Function) and skips already-flagged lines", () => {
+    const findings = sinkFindings([
+      {
+        path: "src/app.ts",
+        lines: [
+          { number: 10, text: "eval(userInput);" },
+          { number: 11, text: "const fn = new Function(userCode); fn();" },
+          { number: 12, text: 'query = "SELECT * FROM users WHERE id = " + id;' },
+        ],
+      },
+    ]);
+    const lines = findings.map((f) => f.line).sort();
+    expect(lines).toEqual([11, 12]);
+    expect(findings.find((f) => f.line === 11)?.severity).toBe("high");
+    expect(findings.find((f) => f.line === 12)?.severity).toBe("medium");
+    expect(findings.every((f) => f.source === "static")).toBe(true);
+  });
+
+  it("does not flag safe code", () => {
+    expect(
+      sinkFindings([
+        {
+          path: "src/util.ts",
+          lines: [
+            { number: 1, text: "const total = parts.reduce(sum, 0);" },
+            { number: 2, text: "return JSON.stringify(total);" },
+          ],
+        },
+      ]),
+    ).toEqual([]);
   });
 });

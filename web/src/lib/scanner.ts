@@ -2,11 +2,15 @@ import { z } from "zod";
 import type { Finding, ScanResult } from "@/db/schema";
 import { detectSecretsInLine } from "../../../packages/engine/src/secrets";
 import { parseUnifiedDiff } from "../../../packages/engine/src/diff";
+import type { DiffFile } from "../../../packages/engine/src/diff";
+import { scanSinks } from "../../../packages/engine/src/sinkpack";
+import { checkWorkflows } from "../../../packages/engine/src/workflowcheck";
 
 export function parseRepository(input: string) {
   const normalized = input
     .trim()
     .replace(/\/$/, "")
+    .replace(/\.git(\/pull\/)/, "$1")
     .replace(/\.git$/, "");
   const match =
     /^(?:https:\/\/github\.com\/)?([a-zA-Z0-9][a-zA-Z0-9-]{0,38})\/([a-zA-Z0-9_.-]{1,100})(?:\/pull\/([1-9]\d{0,7}))?$/.exec(
@@ -90,7 +94,14 @@ export async function github<T>(
     );
   }
   const text = await readLimited(response, 9000000);
-  return (accept.includes("diff") ? text : JSON.parse(text)) as T;
+  if (accept.includes("diff")) return text as T;
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new Error(
+      "GitHub returned an unreadable response. Please retry the scan.",
+    );
+  }
 }
 
 type Source = { path: string; lines: { number: number; text: string }[] };
@@ -151,6 +162,100 @@ export function inspectSource(source: Source): Finding[] {
   }
   return result;
 }
+/**
+ * Present a full source file to the engine's sink scanner as a diff of "all
+ * added lines", so the repo scan gets the SAME per-language dangerous-sink
+ * rule pack the Action's reviewer uses (pickle/yaml loads, shell=True,
+ * ReDoS, raw SQL, Go/PHP/Java/Ruby sinks ... ~40 patterns).
+ */
+function sourceAsDiffFile(source: Source): DiffFile {
+  return {
+    path: source.path,
+    oldPath: source.path,
+    status: "added",
+    isBinary: false,
+    commentableLines: source.lines.map((l) => l.number),
+    rawText: "",
+    hunks: [
+      {
+        oldStart: 1,
+        oldLines: 0,
+        newStart: 1,
+        newLines: source.lines.length,
+        header: "",
+        lines: source.lines.map((l) => ({
+          type: "add" as const,
+          content: l.text,
+          newLine: l.number,
+        })),
+      },
+    ],
+  };
+}
+
+const SINK_SEVERITY: Record<string, "high" | "medium"> = {
+  // Code-execution / deserialization classes are high; everything else is a
+  // hardening note a human should look at.
+  "js-eval": "high",
+  "js-child-process": "high",
+  "js-vm": "high",
+  "js-new-function": "high",
+  "py-eval-exec": "high",
+  "py-os-system": "high",
+  "py-pickle": "high",
+  "py-subprocess-shell": "high",
+  "py-yaml-load": "high",
+};
+
+/**
+ * Deterministic dangerous-sink findings over the supplied sources. Lines that
+ * one of the hand-written web rules already flagged are skipped, so a single
+ * line never produces two findings for the same underlying sink.
+ */
+export function sinkFindings(sources: Source[]): Finding[] {
+  const matches = scanSinks(sources.map(sourceAsDiffFile), {
+    maxSinks: 120,
+  });
+  const alreadyFlagged = new Set(
+    sources.flatMap((s) =>
+      inspectSource(s).map((f) => `${f.file}:${f.line}`),
+    ),
+  );
+  return matches
+    .filter((m) => !alreadyFlagged.has(`${m.file}:${m.line}`))
+    .map((m) => ({
+      file: m.file,
+      line: m.line,
+      severity: SINK_SEVERITY[m.id] ?? "medium",
+      title: `Dangerous sink: ${m.label}`,
+      description: m.note,
+      source: "static" as const,
+    }));
+}
+
+function mapEngineFindings(
+  engineFindings: ReturnType<typeof checkWorkflows>,
+): Finding[] {
+  return engineFindings.map((f) => ({
+    file: f.file,
+    line: f.line ?? 1,
+    severity:
+      f.severity === "critical" || f.severity === "high"
+        ? ("high" as const)
+        : f.severity === "medium"
+          ? ("medium" as const)
+          : ("low" as const),
+    title: f.title,
+    description: f.body,
+    source: "static" as const,
+  }));
+}
+
+/** Run the engine's deterministic workflow supply-chain checks over files. */
+function workflowFindings(files: DiffFile[]): Finding[] {
+  return mapEngineFindings(checkWorkflows(files));
+}
+
 const sourceExtension =
   /\.(?:[cm]?[jt]sx?|py|rb|go|rs|java|php|yml|yaml|toml|json|sh|env|sql|cs|cpp|c|h)$/i;
 const ignored =
@@ -253,6 +358,7 @@ export async function scanRepository(
   const { repository, pullNumber } = parseRepository(input);
   const warnings: string[] = [];
   const sources: Source[] = [];
+  let findingsFromWorkflows: Finding[] = [];
   // No shared server token: each private repository read uses this user's transient token.
   const meta = await read<{
     description: string;
@@ -262,6 +368,12 @@ export async function scanRepository(
   }>(`/repos/${repository}`);
   let sha = "";
   let filesTotal = 0;
+  let repoTree:
+    | {
+        tree: { path: string; type: string; size?: number; sha: string }[];
+        truncated: boolean;
+      }
+    | undefined;
   if (pullNumber) {
     const pr = await read<{
       head: { sha: string };
@@ -296,6 +408,7 @@ export async function scanRepository(
         .slice(0, 1500);
       if (lines.length) sources.push({ path: file.path, lines });
     }
+    findingsFromWorkflows = workflowFindings(files);
     warnings.push(
       "Pull-request analysis covers added lines in up to 40 files from the available GitHub diff, up to 1,500 lines per file. It does not cover the full repository.",
     );
@@ -308,6 +421,7 @@ export async function scanRepository(
       tree: { path: string; type: string; size?: number; sha: string }[];
       truncated: boolean;
     }>(`/repos/${repository}/git/trees/${sha}?recursive=1`);
+    repoTree = tree;
     filesTotal = tree.tree.filter((f) => f.type === "blob").length;
     if (tree.truncated)
       warnings.push(
@@ -366,6 +480,42 @@ export async function scanRepository(
       `Bounded scan: ${sources.length} of ${candidates.length} eligible source files, up to 1,500 lines per file. Generated files, binaries, lockfiles and files over 80 KB are excluded. This is not a complete security audit.`,
     );
   }
+  if (!pullNumber) {
+    // Repo scan: fetch up to 5 GitHub Actions workflow files at the head
+    // commit and run the same deterministic supply-chain checks as the Action.
+    const workflowFiles = (repoTree?.tree ?? [])
+      .filter(
+        (f) =>
+          f.type === "blob" &&
+          f.size !== undefined &&
+          f.size < 100000 &&
+          /^\.github\/workflows\/.+\.(yml|yaml)$/.test(f.path),
+      )
+      .slice(0, 5);
+    const workflowSources: DiffFile[] = [];
+    for (const file of workflowFiles) {
+      try {
+        const blob = await read<{ content: string; encoding: string }>(
+          `/repos/${repository}/git/blobs/${file.sha}`,
+        );
+        if (blob.encoding !== "base64") continue;
+        const content = Buffer.from(blob.content, "base64").toString("utf8");
+        workflowSources.push(
+          sourceAsDiffFile({
+            path: file.path,
+            lines: content
+              .split("\n")
+              .slice(0, 800)
+              .map((text, i) => ({ number: i + 1, text })),
+          }),
+        );
+      } catch {
+        warnings.push(`Could not read workflow file ${file.path}.`);
+      }
+    }
+    if (workflowSources.length)
+      findingsFromWorkflows = workflowFindings(workflowSources);
+  }
   warnings.push(
     "Static analysis skips lines longer than 4,000 characters. Pattern findings require human validation.",
   );
@@ -374,6 +524,8 @@ export async function scanRepository(
       "No readable source lines were available in this scan. No security conclusion can be drawn.",
     );
   let findings = sources.flatMap(inspectSource);
+  findings.push(...sinkFindings(sources));
+  findings.push(...findingsFromWorkflows);
   let ai = false;
   if (useAi && sources.length) {
     try {

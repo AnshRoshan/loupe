@@ -130,7 +130,7 @@ export async function POST(req: Request) {
         .values({
           email,
           name: input.name || email.split("@")[0],
-          passwordHash: hashPassword(input.password),
+          passwordHash: await hashPassword(input.password),
         })
         .onConflictDoNothing()
         .returning();
@@ -146,7 +146,7 @@ export async function POST(req: Request) {
         .from(accounts)
         .where(eq(accounts.email, email))
         .limit(1);
-      const valid = verifyPassword(
+      const valid = await verifyPassword(
         input.password,
         user?.passwordHash ||
           "00000000000000000000000000000000:" + "00".repeat(64),

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { and, desc, eq, lt } from "drizzle-orm";
 import { db } from "@/db";
-import { scans } from "@/db/schema";
+import { rateLimits, scans } from "@/db/schema";
 import { getUser, rateLimit, sameOrigin } from "@/lib/auth";
 import { parseRepository, scanRepository } from "@/lib/scanner";
 export const maxDuration = 60;
@@ -26,6 +26,10 @@ export async function GET() {
         lt(scans.createdAt, new Date(Date.now() - 120000)),
       ),
     );
+  // Housekeeping: expired rate-limit rows are never read again once stale.
+  await db
+    .delete(rateLimits)
+    .where(lt(rateLimits.resetAt, new Date(Date.now() - 3600000)));
   const data = await db
     .select()
     .from(scans)
@@ -95,9 +99,12 @@ export async function POST(req: Request) {
     const message =
       error instanceof z.ZodError
         ? error.issues[0].message
-        : error instanceof Error
-          ? error.message
-          : "Unable to complete the scan.";
+        : error instanceof Error &&
+          (error.name === "TimeoutError" || error.name === "AbortError")
+          ? "The scan ran out of its time budget. Try a specific pull request or a smaller repository."
+          : error instanceof Error
+            ? error.message
+            : "Unable to complete the scan.";
     if (id)
       await db
         .update(scans)

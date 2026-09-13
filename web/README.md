@@ -6,7 +6,7 @@ A redesigned product website and working repository-review workspace around [ans
 
 - Responsive landing page, interactive example (explicitly labeled), authentication, documentation, workspace, settings, reports, and error/empty/loading states.
 - Real GitHub repository and pull-request scanning. Commit-pinned reads, bounded parallel fetching, streamed response caps, 26-second GitHub read budget, 48-second overall budget.
-- Original Loupe secret detection and diff parser, plus web static checks for dynamic execution, TLS bypass, HTML sinks, and interpolated shell calls.
+- Original Loupe secret detection and diff parser, plus the engine's full per-language dangerous-sink rule pack (eval, child processes, deserialization, SQL concatenation, ReDoS, and more) and deterministic GitHub Actions supply-chain checks (unpinned actions, pull_request_target, script injection).
 - Optional OpenAI-compatible web AI review: opt-in, detected-secret redaction, JSON schema validation, exact supplied-line validation, conservative failure handling.
 - PostgreSQL persistence with Drizzle, owner-scoped access, RLS to block public Data API access, persistent atomic rate limits.
 - Supabase email/password, confirmation, GitHub OAuth, recovery, callback and session refresh support when configured.

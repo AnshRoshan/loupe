@@ -62,15 +62,27 @@ describe("deployment-safe request origins", () => {
   });
 });
 describe("standalone password protection", () => {
-  it("uses a distinct salt for each password hash", () => {
-    expect(hashPassword("A-long-password!")).not.toBe(
-      hashPassword("A-long-password!"),
+  it("uses a distinct salt for each password hash", async () => {
+    expect(await hashPassword("A-long-password!")).not.toBe(
+      await hashPassword("A-long-password!"),
     );
   });
-  it("verifies only the correct password", () => {
-    const hash = hashPassword("A-long-password!");
-    expect(verifyPassword("A-long-password!", hash)).toBe(true);
-    expect(verifyPassword("Not-the-password!", hash)).toBe(false);
+  it("verifies only the correct password", async () => {
+    const hash = await hashPassword("A-long-password!");
+    expect(await verifyPassword("A-long-password!", hash)).toBe(true);
+    expect(await verifyPassword("Not-the-password!", hash)).toBe(false);
     expect(hash).not.toContain("A-long-password!");
+  });
+  it("rejects corrupted or legacy-incompatible stored hashes instead of throwing", async () => {
+    await expect(verifyPassword("x", "garbage")).resolves.toBe(false);
+    await expect(verifyPassword("x", "")).resolves.toBe(false);
+    await expect(verifyPassword("x", "salt-only-no-colon")).resolves.toBe(false);
+  });
+  it("still verifies a legacy-format (salt:hash) hash", async () => {
+    const { randomBytes, scryptSync } = await import("node:crypto");
+    const salt = randomBytes(16).toString("hex");
+    const legacy = `${salt}:${scryptSync("old-account-pass", salt, 64).toString("hex")}`;
+    expect(await verifyPassword("old-account-pass", legacy)).toBe(true);
+    expect(await verifyPassword("wrong", legacy)).toBe(false);
   });
 });

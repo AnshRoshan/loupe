@@ -1,14 +1,22 @@
 import { cookies } from "next/headers";
 import {
   randomBytes,
-  scryptSync,
+  scrypt as scryptCallback,
   timingSafeEqual,
   createHash,
 } from "node:crypto";
-import { and, eq, gt, sql } from "drizzle-orm";
+import { promisify } from "node:util";
+import { and, eq, gt, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { accounts, sessions, rateLimits } from "@/db/schema";
 import { createServerClient } from "@supabase/ssr";
+
+const scrypt = promisify(scryptCallback) as (
+  password: string,
+  salt: string,
+  keylen: number,
+  options: { N: number; r: number; p: number; maxmem: number },
+) => Promise<Buffer>;
 
 export const hasSupabase = () =>
   Boolean(
@@ -38,21 +46,61 @@ export async function supabaseServer() {
     },
   );
 }
-export function hashPassword(password: string) {
+
+/**
+ * scrypt parameters. The stored hash carries its parameters
+ * ("s2$N$r$p$salt:hash") so the cost can rise later without invalidating
+ * existing accounts; the legacy "salt:hash" form (N=16384) still verifies.
+ * The work runs ASYNC: scryptSync would block the serverless event loop for
+ * every login on the instance.
+ */
+const SCRYPT = { N: 32768, r: 8, p: 1, maxmem: 64 * 1024 * 1024 };
+const LEGACY_SCRYPT = { N: 16384, r: 8, p: 1, maxmem: 64 * 1024 * 1024 };
+
+export async function hashPassword(password: string) {
   const salt = randomBytes(16).toString("hex");
-  return `${salt}:${scryptSync(password, salt, 64).toString("hex")}`;
+  const hash = (
+    await scrypt(password, salt, 64, SCRYPT)
+  ).toString("hex");
+  return `s2$${SCRYPT.N}$${SCRYPT.r}$${SCRYPT.p}$${salt}:${hash}`;
 }
-export function verifyPassword(password: string, stored: string) {
-  const [salt, hash] = stored.split(":");
-  const actual = scryptSync(password, salt, 64);
-  const expected = Buffer.from(hash, "hex");
-  return actual.length === expected.length && timingSafeEqual(actual, expected);
+
+export async function verifyPassword(password: string, stored: string) {
+  // Versioned "s2$N$r$p$salt:hash" or legacy "salt:hash"; anything else is a
+  // corrupted row — fail the check instead of crashing the request.
+  if (!stored) return false;
+  try {
+    if (stored.startsWith("s2$")) {
+      const [tag, n, r, p, rest] = stored.split("$");
+      if (tag !== "s2" || !rest?.includes(":")) return false;
+      const [salt, hash] = rest.split(":");
+      const actual = await scrypt(password, salt, 64, {
+        N: Number(n),
+        r: Number(r),
+        p: Number(p),
+        maxmem: 64 * 1024 * 1024,
+      });
+      const expected = Buffer.from(hash, "hex");
+      return (
+        actual.length === expected.length && timingSafeEqual(actual, expected)
+      );
+    }
+    const [salt, hash] = stored.split(":");
+    if (!salt || !hash) return false;
+    const actual = await scrypt(password, salt, 64, LEGACY_SCRYPT);
+    const expected = Buffer.from(hash, "hex");
+    return actual.length === expected.length && timingSafeEqual(actual, expected);
+  } catch {
+    return false;
+  }
 }
 const digest = (token: string) =>
   createHash("sha256").update(token).digest("hex");
 export async function createSession(userId: string) {
   const token = randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7);
+  // Housekeeping: expired rows are useless and would otherwise grow forever.
+  await db.delete(sessions).where(lt(sessions.expiresAt, new Date()));
   await db.insert(sessions).values({ id: digest(token), userId, expiresAt });
   (await cookies()).set("loupe_session", token, {
     httpOnly: true,
