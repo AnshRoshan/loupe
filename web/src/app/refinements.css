@@ -1,0 +1,202 @@
+/* Legibility refinements preserve the warm, restrained palette. */
+@media (min-width: 641px) {
+  .mobile-toggle.icon-button {
+    display: none;
+  }
+}
+.button-primary {
+  background: var(--c-cc-4e-2e);
+  border-color: var(--c-bd-43-26);
+  color: var(--c-ff-ff-ff);
+}
+.button-primary:hover {
+  background: var(--c-ba-42-26);
+}
+.hero-description {
+  color: var(--c-71-76-6e);
+}
+.hero-notes {
+  color: var(--c-76-7e-6b);
+}
+.hero-credit {
+  color: var(--c-78-81-6f);
+}
+.hero-credit b {
+  color: var(--c-59-63-4f);
+}
+.hero-eyebrow {
+  color: var(--c-70-79-5f);
+}
+.eyebrow {
+  color: var(--c-74-7e-62);
+}
+.section-heading > p,
+.feature-card > p,
+.feature-wide p,
+.section-description,
+.steps p,
+.faq-grid > div > p,
+.faq-item > p,
+.bottom-cta p {
+  color: var(--c-74-7e-68);
+}
+.integrations-strip p {
+  color: var(--c-7c-83-6f);
+}
+.footer-main p,
+.footer-main nav {
+  color: var(--c-74-7f-63);
+}
+.footer-bottom {
+  color: var(--c-7b-86-6a);
+}
+.cta-note {
+  color: var(--c-78-82-63);
+}
+.auth-form-wrap > p,
+.auth-form-wrap > .auth-switch,
+.auth-form-wrap > .auth-provider-note {
+  color: var(--c-73-7f-63);
+}
+.auth-form-wrap > .auth-legal,
+.auth-bottom {
+  color: var(--c-78-86-69);
+}
+.auth-divider {
+  color: var(--c-7f-8a-70);
+}
+.auth-form input::placeholder {
+  color: var(--c-89-93-7d);
+}
+.auth-aside-content > p,
+.auth-benefits > span,
+.auth-trust,
+.auth-aside-footer {
+  color: var(--c-76-84-5f);
+}
+.auth-trust b {
+  color: var(--c-65-73-4f);
+}
+.auth-form-wrap > .eyebrow,
+.auth-top > .text-link {
+  color: var(--c-77-84-65);
+}
+.password-label a {
+  color: var(--c-74-83-5e);
+}
+.auth-form label {
+  color: var(--c-62-70-50);
+}
+.sidebar-nav button,
+.sidebar-bottom > a {
+  color: var(--c-6d-7b-5b);
+}
+.sidebar-label,
+.workspace-chip small,
+.sidebar-user small {
+  color: var(--c-78-88-66);
+}
+.sidebar-note h4,
+.sidebar-note a {
+  color: var(--c-65-77-4f);
+}
+.sidebar-note p {
+  color: var(--c-77-88-65);
+}
+.dashboard-heading p,
+.stat-card > div,
+.workspace-hero p,
+.workspace-hero-label {
+  color: var(--c-75-84-60);
+}
+.stat-card small,
+.review-row-name > span,
+.review-finding-count,
+.workspace-footer-note,
+.dashboard-footer {
+  color: var(--c-78-89-69);
+}
+.dashboard-topbar > div,
+.dashboard-topbar > .workspace-open-source {
+  color: var(--c-75-83-64);
+}
+.search-field input,
+.list-toolbar select {
+  color: var(--c-64-77-51);
+}
+.search-field input::placeholder {
+  color: var(--c-83-91-6f);
+}
+.sidebar-user > .icon-button,
+.sidebar-user > a {
+  color: var(--c-77-89-65);
+}
+.badge {
+  color: var(--c-68-7e-50);
+}
+.workspace-lens > span {
+  color: var(--c-76-89-56);
+}
+.repository-card p,
+.repository-card > div {
+  color: var(--c-7a-8b-65);
+}
+.repository-card .text-link {
+  color: var(--c-61-78-4b);
+}
+.report-summary p {
+  color: var(--c-71-86-53);
+}
+.scan-coverage summary,
+.scan-coverage ul {
+  color: var(--c-7a-83-66);
+}
+.finding-card > p {
+  color: var(--c-73-7f-63);
+}
+.finding-source,
+.finding-top > a {
+  color: var(--c-77-8b-61);
+}
+.settings-title p,
+.settings-row > span:first-child,
+.settings-row b {
+  color: var(--c-75-87-61);
+}
+.settings-panel > .text-link {
+  color: var(--c-6e-84-55);
+}
+.scan-dialog > p,
+.scan-scope-note,
+.scan-loading-note,
+.checkbox-label small,
+.scan-dialog .auth-form > label > small,
+.private-repo-details small,
+.private-repo-details summary {
+  color: var(--c-78-87-65);
+}
+.guest-banner {
+  color: var(--c-8e-71-47);
+}
+.toast {
+  color: var(--c-63-7d-45);
+}
+.docs-content p,
+.docs-content li,
+.docs-nav > a,
+.docs-content > header p {
+  color: var(--c-73-83-61);
+}
+.docs-content pre,
+.docs-content code {
+  color: var(--c-61-7e-47);
+}
+.env-table td {
+  color: var(--c-70-84-5a);
+}
+.docs-content a:not(.button) {
+  color: var(--c-a9-69-46);
+}
+.docs-footer {
+  color: var(--c-71-87-5a);
+}

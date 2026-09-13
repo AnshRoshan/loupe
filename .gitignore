@@ -1,0 +1,34 @@
+node_modules/
+dist/
+# ...but the committed GitHub Action bundle (dist/action/index.js) IS tracked —
+# GitHub runs actions from committed code, not from an npm install. `dist/`
+# blocks descent, so re-include the root dist dir, re-ignore its other children,
+# then re-include only the bundle itself (not ncc's stray .d.ts output).
+!/dist/
+/dist/*
+!/dist/action/
+/dist/action/*
+!/dist/action/index.js
+.env
+.env.*
+__pycache__/
+.venv/
+*.log
+.DS_Store
+.dev.vars
+.wrangler/
+# Generated eval artifacts (report items #11/#25) — local-only derived output.
+# The trend log (evals/history.jsonl) and golden baseline (evals/snapshots.json)
+# ARE tracked; the rendered HTML, mined cases, and adapted public-benchmark cases
+# are regenerated from local sources, never committed.
+evals/history.html
+evals/mined/
+evals/benchmarks/
+
+# Unmerged working copy of the web redesign (merged into web/); local only.
+/full-stack-loupe-redesign (3)/
+web/test-results/
+web/playwright-report/
+
+# Plugin scratch state
+.video_agent/

@@ -1,0 +1,11 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/engine" },
+    { "path": "packages/action" },
+    { "path": "packages/worker" },
+    { "path": "packages/scope-ts" },
+    { "path": "packages/ts-symbols" },
+    { "path": "packages/rag" }
+  ]
+}

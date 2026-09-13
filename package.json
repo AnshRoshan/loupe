@@ -1,0 +1,22 @@
+{
+  "name": "code-review",
+  "private": true,
+  "version": "0.0.0",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "build:action": "ncc build packages/action/src/main.ts -o dist/action",
+    "typecheck": "tsc -b",
+    "test": "vitest run",
+    "eval": "node evals/run.mjs",
+    "dev:worker": "node packages/worker/scripts/embed-prompt.mjs && wrangler dev --config packages/worker/wrangler.toml"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@vercel/ncc": "^0.44.1",
+    "typescript": "^5.8.0",
+    "vitest": "^3.2.0"
+  }
+}

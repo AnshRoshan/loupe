@@ -1,0 +1,98 @@
+name: "Loupe"
+description: "Loupe — AI reviews your pull requests and posts inline comments + a summary, CodeRabbit-style, on your own LLM key."
+author: "anshace"
+
+branding:
+  icon: "git-pull-request"
+  color: "purple"
+
+inputs:
+  github-token:
+    description: "Token used to read the diff and post the review. The default workflow token is fine."
+    required: false
+    default: ${{ github.token }}
+  llm-api-key:
+    description: "API key for the chosen provider. Store it as a repo secret. Read as the unified LLM_API_KEY (and, for review-model shortcuts, the provider-specific var)."
+    required: true
+  provider:
+    description: >
+      LLM API PROTOCOL (not the vendor): openai | anthropic | gemini.
+      'openai' is ANY OpenAI-compatible /chat/completions endpoint (OpenAI,
+      OpenRouter, DeepSeek, Together, Groq, local/Ollama) — set base-url + model.
+      'anthropic' is any Anthropic /v1/messages endpoint. 'gemini' is Google AI
+      Studio. Leave empty to use the review-model back-compat shortcut instead.
+    required: false
+    default: ""
+  model:
+    description: "Model id for the chosen provider (e.g. gpt-4o-mini, deepseek/deepseek-chat, claude-haiku-4-5, gemini-2.5-flash). Required when provider=openai."
+    required: false
+    default: ""
+  base-url:
+    description: >
+      For provider=openai: a preset keyword (openai | openrouter | groq |
+      deepseek | together) or a full http(s):// URL (e.g. an Ollama endpoint).
+      For anthropic/gemini: optional endpoint override. Ignored by review-model.
+    required: false
+    default: ""
+  escalation-model:
+    description: "Stronger model for risky diffs (auth/payment/migration/etc). Rebuilds the same provider with this model. Anthropic defaults to claude-sonnet-5 when unset; other endpoints don't escalate without it."
+    required: false
+    default: ""
+  review-model:
+    description: "Back-compat alias (used only when `provider` is empty): gemini | haiku | groq."
+    required: false
+    default: "haiku"
+  min-severity:
+    description: "Lowest finding severity to publish: critical | high | medium | low | nit."
+    required: false
+    default: "medium"
+  config-path:
+    description: "Path (at the PR head) to the repo review config file."
+    required: false
+    default: ".aireview.toml"
+  state-path:
+    description: "Optional path to a state file enabling incremental re-review + still-open carry-forward (persist it via actions/cache)."
+    required: false
+  run-log-path:
+    description: "Optional path to append a JSONL run-log record per review."
+    required: false
+  blocking-severities:
+    description: "Comma-separated severity floor(s) for the blocking tier: when a published finding is at least this severe, the review is submitted as REQUEST_CHANGES instead of COMMENT (e.g. \"critical,high\"). Empty = advisory COMMENT always."
+    required: false
+    default: ""
+  verify:
+    description: "Run the verifier pass: a second, independent LLM call that tries to kill each finding with cited evidence (fail-open). Off by default."
+    required: false
+    default: ""
+  agentic:
+    description: "Enable the capped agentic tool loop: the model may request read-only grep/read_file/find_importers lookups under hard caps. Off by default."
+    required: false
+    default: ""
+  cross-file-callers:
+    description: "Force-inject call sites of changed exported signatures from other files into the prompt (cross-file bug catching). Off by default."
+    required: false
+    default: ""
+  related-tests:
+    description: "Inject sibling test-file context for changed files into the prompt. Off by default."
+    required: false
+    default: ""
+  history-context:
+    description: "Inject git-history context (churn, author count) for changed files into the prompt. Off by default."
+    required: false
+    default: ""
+  sink-pack:
+    description: "Deterministic dangerous-sink (SAST-lite) evidence scan over added lines (eval/exec/innerHTML/raw SQL/etc). Off by default."
+    required: false
+    default: ""
+  walkthrough:
+    description: "Ask the reviewer for a short walkthrough narrative and render it in the summary. Off by default."
+    required: false
+    default: ""
+  injection-defense:
+    description: "Scan attacker-reachable prompt text (diff, house rules, custom rules) for injection markers/zero-width characters; strips and discloses. Off by default."
+    required: false
+    default: ""
+
+runs:
+  using: "node20"
+  main: "dist/action/index.js"
