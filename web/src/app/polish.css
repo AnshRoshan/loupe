@@ -1,0 +1,258 @@
+/**
+ * Polish layer - the "last 15%" craft pass. Loaded after the three core
+ * stylesheets so its rules win ties without !important (except where noted).
+ *
+ * Physics (developer-tool profile): motion is feedback only, never spectacle.
+ *   fast 120ms ease-out for hover/press, 600-700ms cubic-bezier(0.16,1,0.3,1)
+ *   for reveals · everything gated behind prefers-reduced-motion.
+ */
+
+:root {
+  --motion-fast: 120ms;
+  --motion-ui: 160ms;
+  --motion-reveal: 640ms;
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-reveal: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── Interactive micro-feedback ─────────────────────────────────────────
+   Buttons answer instantly (120ms), lift one pixel on hover, and compress
+   on press. Neutral shadow works on paper and charcoal alike. */
+.button,
+.button-dark,
+.button-white,
+.icon-button {
+  transition:
+    background-color var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out),
+    color var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out);
+}
+
+.button:hover,
+.button-dark:hover,
+.button-white:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(35, 43, 48, 0.13);
+}
+
+.button:active,
+.button-dark:active,
+.button-white:active,
+.icon-button:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: none;
+  transition-duration: 60ms;
+}
+
+/* Inputs answer to the finger too: border darkens on approach, focus ring
+   animates in instead of snapping. */
+.auth-form input,
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="url"] {
+  transition:
+    border-color var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out),
+    background-color var(--motion-fast) var(--ease-out);
+}
+
+input[type="text"]:hover:not(:focus):not(:disabled),
+input[type="email"]:hover:not(:focus):not(:disabled),
+input[type="password"]:hover:not(:focus):not(:disabled),
+input[type="url"]:hover:not(:focus):not(:disabled) {
+  border-color: var(--c-b9-b9-b0);
+}
+
+/* Inline text links: underline slides its offset, never flashes. */
+main a:not(.button):not(.button-dark):not(.button-white) {
+  transition: color var(--motion-fast) var(--ease-out);
+}
+
+/* Feature / info cards: one calm hover response - border deepens, card
+   rises 2px, shadow softens the landing. */
+.feature-card {
+  transition:
+    border-color var(--motion-ui) var(--ease-out),
+    box-shadow var(--motion-ui) var(--ease-out),
+    transform var(--motion-ui) var(--ease-out);
+}
+
+.feature-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 34px rgba(35, 43, 48, 0.09);
+}
+
+/* Workspace rows and buttons keep the same press physics. */
+.icon-button,
+.delete-review {
+  transition:
+    background-color var(--motion-fast) var(--ease-out),
+    color var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out);
+}
+
+/* ── Entrance choreography ──────────────────────────────────────────────
+   One reveal per visit: the hero copy rises in a gentle sequence, the hero
+   example follows a beat later. Text is never hidden if JS or motion
+   preferences fail - these are pure CSS animations that run once. */
+@media (prefers-reduced-motion: no-preference) {
+  .hero-copy > * {
+    animation: rise var(--motion-reveal) var(--ease-reveal) both;
+  }
+
+  .hero-copy > .hero-eyebrow { animation-delay: 0ms; }
+  .hero-copy > h1 { animation-delay: 70ms; }
+  .hero-copy > .hero-description { animation-delay: 160ms; }
+  .hero-copy > .hero-buttons { animation-delay: 240ms; }
+  .hero-copy > .hero-notes { animation-delay: 310ms; }
+  .hero-copy > .hero-credit { animation-delay: 370ms; }
+
+  .hero-visual,
+  .hero-example {
+    animation: rise-soft 720ms var(--ease-reveal) 200ms both;
+  }
+
+  /* Auth pages: the form column reads top-to-bottom, so does its reveal. */
+  .auth-form-wrap > *,
+  .auth-brand-row {
+    animation: rise 560ms var(--ease-reveal) both;
+  }
+
+  .auth-form-wrap > *:nth-child(1) { animation-delay: 0ms; }
+  .auth-form-wrap > *:nth-child(2) { animation-delay: 50ms; }
+  .auth-form-wrap > *:nth-child(3) { animation-delay: 100ms; }
+  .auth-form-wrap > *:nth-child(4) { animation-delay: 150ms; }
+  .auth-form-wrap > *:nth-child(n + 5) { animation-delay: 200ms; }
+
+  .auth-aside-content > * {
+    animation: rise-soft 640ms var(--ease-reveal) both;
+  }
+
+  .auth-aside-content > .auth-lens { animation-delay: 120ms; }
+  .auth-aside-content > h2 { animation-delay: 200ms; }
+  .auth-aside-content > p { animation-delay: 280ms; }
+  .auth-aside-content > .auth-benefits { animation-delay: 340ms; }
+  .auth-aside-content > .auth-trust { animation-delay: 420ms; }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes rise-soft {
+  from {
+    opacity: 0;
+    transform: translateY(22px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ── Scroll reveal (landing sections) ──────────────────────────────────
+   ScrollReveal marks <html class="reveal-ready"> only after mount, so a
+   failed/absent JS run never hides content; reduced-motion users skip it. */
+.reveal-ready [data-reveal] {
+  opacity: 0;
+  transform: translateY(22px);
+  transition:
+    opacity var(--motion-reveal) var(--ease-reveal),
+    transform var(--motion-reveal) var(--ease-reveal);
+  transition-delay: var(--reveal-delay, 0ms);
+  will-change: opacity, transform;
+}
+
+.reveal-ready [data-reveal].in-view {
+  opacity: 1;
+  transform: none;
+}
+
+/* ── Floating proof chips (auth aside) ─────────────────────────────────
+   Two small cards drift slowly around the lens to give the panel depth.
+   Pure decoration: aria-hidden in markup, frozen under reduced motion. */
+.auth-float-card {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 13px;
+  border: 1px solid var(--c-dd-dd-d6, #dddddd);
+  border-radius: 9px;
+  background: var(--c-ff-ff-fa, #fffffa);
+  box-shadow: 0 10px 28px rgba(35, 43, 48, 0.12);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--c-4a-52-56, #4a5256);
+  pointer-events: none;
+}
+
+.auth-float-card svg {
+  color: var(--green);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .auth-float-card {
+    animation: drift 7s ease-in-out infinite alternate;
+  }
+
+  .auth-float-card.auth-float-b {
+    animation-duration: 9s;
+    animation-delay: -3s;
+  }
+}
+
+@keyframes drift {
+  from {
+    transform: translateY(-4px);
+  }
+  to {
+    transform: translateY(5px);
+  }
+}
+
+/* ── Focus discipline ───────────────────────────────────────────────────
+   One visible ring everywhere: 2px accent with breathing room, so keyboard
+   focus is obvious on paper, charcoal, and inside dark panels. */
+:focus-visible {
+  outline-offset: 3px;
+}
+
+::selection {
+  border-radius: 2px;
+}
+
+/* Float chip placement: orbiting the lens, hidden where the aside stacks. */
+.auth-aside {
+  position: relative;
+}
+
+/* Anchored to the centered content column: chip A frames the lens on the
+   upper left, chip B sits below the benefits on the right. */
+.auth-float-a {
+  top: 44px;
+  left: calc(50% - 292px);
+  transform: rotate(-3deg);
+}
+
+.auth-float-b {
+  bottom: 118px;
+  right: calc(50% - 322px);
+  transform: rotate(2.5deg);
+}
+
+@media (max-width: 980px) {
+  .auth-float-card {
+    display: none;
+  }
+}

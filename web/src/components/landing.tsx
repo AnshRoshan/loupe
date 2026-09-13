@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import {
   ArrowRight,
   ArrowUpRight,
@@ -23,6 +23,7 @@ import {
   Zap,
 } from "lucide-react";
 import { SiteNav } from "./site-nav";
+import { ScrollReveal } from "./scroll-reveal";
 import { Brand } from "./brand";
 import { ReviewPreview } from "./review-preview";
 import { workflow } from "@/lib/workflow";
@@ -54,6 +55,7 @@ export function Landing() {
   return (
     <>
       <SiteNav />
+      <ScrollReveal />
       <main id="main">
         <section className="hero">
           <div className="container hero-grid">
@@ -144,7 +146,7 @@ export function Landing() {
         </section>
         <section id="features" className="features-section section-pad">
           <div className="container">
-            <div className="section-heading">
+            <div className="section-heading" data-reveal>
               <span className="eyebrow">A CLOSER LOOK. A BETTER REVIEW.</span>
               <h2>
                 More signal.
@@ -158,7 +160,7 @@ export function Landing() {
               </p>
             </div>
             <div className="feature-grid">
-              <article className="feature-card context-card">
+              <article className="feature-card context-card" data-reveal style={{ "--reveal-delay": "60ms" } as CSSProperties}>
                 <span className="feature-icon">
                   <Layers3 size={21} />
                 </span>
@@ -202,7 +204,7 @@ export function Landing() {
                   </div>
                 </div>
               </article>
-              <article className="feature-card security-card">
+              <article className="feature-card security-card" data-reveal style={{ "--reveal-delay": "140ms" } as CSSProperties}>
                 <span className="feature-icon">
                   <ShieldCheck size={21} />
                 </span>
@@ -230,7 +232,7 @@ export function Landing() {
                   </span>
                 </div>
               </article>
-              <article className="feature-card control-card">
+              <article className="feature-card control-card" data-reveal style={{ "--reveal-delay": "220ms" } as CSSProperties}>
                 <span className="feature-icon">
                   <Settings2 size={21} />
                 </span>
@@ -260,7 +262,7 @@ export function Landing() {
                   </pre>
                 </div>
               </article>
-              <article className="feature-wide">
+              <article className="feature-wide" data-reveal>
                 <div>
                   <span className="feature-icon">
                     <LockKeyhole size={20} />

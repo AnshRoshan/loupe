@@ -903,7 +903,7 @@ export function Dashboard({
                           <span className="review-finding-count">
                             {s.result
                               ? `${s.result.findings.length} findings`
-                              : "—"}
+                              : "None yet"}
                           </span>
                           <button
                             className="icon-button delete-review"

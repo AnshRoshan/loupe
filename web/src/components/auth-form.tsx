@@ -2,18 +2,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  ArrowLeft,
-  ArrowRight,
-  Check,
-  Eye,
-  EyeOff,
-  Github,
-  LoaderCircle,
-  LockKeyhole,
-  ScanEye,
-  ShieldCheck,
-} from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Github, LoaderCircle, LockKeyhole, ScanEye, ShieldCheck, Bug } from "lucide-react";
 import { Brand } from "./brand";
 export function AuthForm({ mode }: { mode: "login" | "signup" | "reset" }) {
   const [show, setShow] = useState(false);
@@ -235,6 +224,12 @@ export function AuthForm({ mode }: { mode: "login" | "signup" | "reset" }) {
         <div className="auth-aside-content">
           <div className="auth-lens">
             <ScanEye size={76} strokeWidth={1.1} />
+          </div>
+          <div className="auth-float-card auth-float-a" aria-hidden="true">
+            <ShieldCheck size={13} /> Secret scan clean
+          </div>
+          <div className="auth-float-card auth-float-b" aria-hidden="true">
+            <Bug size={13} /> 3 findings · 1 suggestion
           </div>
           <h2>
             Good code is

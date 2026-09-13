@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import "./globals.css";
 import "./workspace.css";
 import "./refinements.css";
+import "./polish.css";
 export const metadata: Metadata = {
   title: {
     default: "Loupe. A closer look. Better code.",

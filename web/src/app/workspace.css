@@ -730,12 +730,15 @@
   color: var(--c-a5-b0-96);
   background: var(--c-ff-fe-fa);
 }
+.search-field:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
 .search-field input {
   border: none;
   background: transparent;
   font-size: 10px;
   color: var(--c-74-84-5f);
-  outline: none !important;
   max-width: 180px;
   min-width: 0;
   width: 100%;
@@ -2231,5 +2234,11 @@
   .docs-content p,
   .docs-content li {
     font-size: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    animation: none;
   }
 }
